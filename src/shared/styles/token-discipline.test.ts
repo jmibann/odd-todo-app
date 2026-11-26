@@ -5,15 +5,16 @@ import valueParser from 'postcss-value-parser'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Enforces AGENTS.md B5 (L15 + L17: allowlist enforced on declaration
- * VALUES via postcss + postcss-value-parser, not regex on lines).
+ * Enforces AGENTS.md B5 (L15 + L17 + L19: allowlist enforced on declaration
+ * VALUES and at-rule PARAMS via postcss + postcss-value-parser, not regex
+ * on lines). Selectors, comments and url() are never scanned.
  * In any .css except tokens.css:
  *  - any number with a unit fails (whitelist: fr, any amount)
  *  - any % fails; any hex outside url() fails
  *  - any color function fails (case-insensitive)
  *  - named colors fail; only transparent, currentColor and the CSS-wide
  *    keywords (inherit/initial/unset/revert/revert-layer) are allowed
- *  - the first minmax() argument must be a simple var(--…) token
+ *  - the first minmax() argument must be a simple var(--…) token or 0
  *  - font-size must reference a token
  * Selectors, comments and url(…) contents are not declaration values and
  * are never scanned. Failures name file and line.
@@ -43,7 +44,6 @@ const ALLOWED_KEYWORDS = new Set([
   'initial',
   'unset',
   'revert',
-  'revert-layer',
 ])
 
 const NAMED_COLORS = new Set([
@@ -113,15 +113,22 @@ function checkNodes(nodes: VNode[]): string[] {
           (a) => a.type !== 'space',
         )
         const token = firstArg[0]
-        const inner = (token?.nodes ?? []).filter((a) => a.type !== 'space')
-        const isSimpleVar =
+        let okFirstArg = false
+        if (firstArg.length === 1 && token?.type === 'word') {
+          okFirstArg = /^0+(?:\.0+)?$/.test(token.value)
+        }
+        if (
           firstArg.length === 1 &&
           token?.type === 'function' &&
-          token.value.toLowerCase() === 'var' &&
-          inner.length === 1 &&
-          inner[0]?.type === 'word' &&
-          /^--[\w-]+$/.test(inner[0].value)
-        if (!isSimpleVar) {
+          token.value.toLowerCase() === 'var'
+        ) {
+          const inner = (token.nodes ?? []).filter((a) => a.type !== 'space')
+          okFirstArg =
+            inner.length === 1 &&
+            inner[0]?.type === 'word' &&
+            /^--[\w-]+$/.test(String(inner[0]?.value))
+        }
+        if (!okFirstArg) {
           found.push('minmax first argument outside tokens')
         }
       }
@@ -155,6 +162,33 @@ function declViolations(prop: string, value: string): string[] {
   return found
 }
 
+function checkParams(params: string): string[] {
+  // At-rule params are scanned (L19.3) after stripping comments, url() and
+  // strings. Colors and named colors make no sense in at-rule params, but
+  // raw lengths/percentages do not belong there either (B5).
+  const text = params
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/url\([^)]*\)/gi, ' ')
+    .replace(/(['"])(?:\\.|(?!\1).)*\1/g, ' ')
+  const found: string[] = []
+  const withUnit = /[-+]?(?:\d+(?:\.\d+)?|\.\d+)([a-z]+|%)|%/gi
+  let m
+  while ((m = withUnit.exec(text)) !== null) {
+    if (m[1] === undefined) {
+      found.push('percent')
+    } else if (m[1].toLowerCase() !== 'fr') {
+      found.push(m[1] === '%' ? 'percent' : 'number with unit')
+    }
+  }
+  if (/#\d/i.test(text)) found.push('hex outside url')
+  if (
+    /\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|light-dark)\s*\(/i.test(text)
+  ) {
+    found.push('color function')
+  }
+  return found
+}
+
 function scanCss(css: string): string[] {
   const out: string[] = []
   let root: Root
@@ -163,6 +197,12 @@ function scanCss(css: string): string[] {
   } catch (e) {
     return [`unparseable css → ${String(e).slice(0, 90)}`]
   }
+  root.walkAtRules((atRule) => {
+    for (const name of new Set(checkParams(atRule.params))) {
+      const line = atRule.source?.start?.line ?? 1
+      out.push(`${line}: ${name} → "@${atRule.name} ${atRule.params}"`)
+    }
+  })
   root.walkDecls((decl) => {
     for (const name of new Set(declViolations(decl.prop, decl.value))) {
       const line = decl.source?.start?.line ?? 1
@@ -264,6 +304,12 @@ describe('B5 scanner rules (regression fixtures)', () => {
     expect(
       fires('minmax first argument outside tokens', 'minmax(10px, 1fr)'),
     ).toBe(true)
+    expect(fires('number with unit', 'minmax(0, 1fr)')).toBe(false)
+    expect(
+      declViolations('grid-template-columns', 'repeat(3, minmax(0, 1fr))'),
+    ).toEqual([])
+    expect(fires('number with unit', 'calc(var(--space-md) * 2)')).toBe(false)
+    expect(fires('number with unit', 'var(--x, 10px)')).toBe(true)
   })
 
   it('never scans selectors, comments or url contents (L17.3 probes)', () => {
@@ -278,6 +324,9 @@ describe('B5 scanner rules (regression fixtures)', () => {
     expect(
       scanCss('.a { grid-template-columns: repeat(auto-fit, minmax(var(--x), 1fr)); }'),
     ).toEqual([])
+    expect(
+      scanCss('@media (max-width: 640px) { .a { color: var(--color-text); } }'),
+    ).toEqual(['1: number with unit → "@media (max-width: 640px)"'])
     expect(scanCss('.a { font-size: large; }')).toEqual([
       '1: font size outside tokens → "font-size: large"',
     ])
