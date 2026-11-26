@@ -1,9 +1,25 @@
 import { expect, test } from '@playwright/test'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const STORAGE_KEY = ['odd-todo-app', 'tasks'].join(':')
+
+/* Temporary files created by tests, removed after every test. */
+const tempFiles: string[] = []
+
+function tempFile(name: string, content: string): string {
+  const path = join(tmpdir(), `${process.pid}-${name}`)
+  writeFileSync(path, content)
+  tempFiles.push(path)
+  return path
+}
+
+test.afterEach(() => {
+  for (const path of tempFiles.splice(0)) {
+    rmSync(path, { force: true })
+  }
+})
 
 async function addTask(page: import('@playwright/test').Page, text: string) {
   const input = page.getByRole('textbox', { name: 'New task' })
@@ -74,9 +90,8 @@ test('cancel keeps everything, invalid files change nothing (S2, S3)', async ({
   )
 
   // valid file, but cancel
-  const goodPath = join(tmpdir(), 'backup-good.json')
-  writeFileSync(
-    goodPath,
+  const goodPath = tempFile(
+    'backup-good.json',
     JSON.stringify({
       format: 'odd-todo-app/backup',
       version: 1,
@@ -90,8 +105,7 @@ test('cancel keeps everything, invalid files change nothing (S2, S3)', async ({
   await expect(page.getByText('Imported')).toHaveCount(0)
 
   // invalid file: not JSON
-  const badPath = join(tmpdir(), 'backup-bad.json')
-  writeFileSync(badPath, '{definitely not json')
+  const badPath = tempFile('backup-bad.json', '{definitely not json')
   await page.locator('input[type="file"]').setInputFiles(badPath)
   await expect(page.getByRole('alert')).toHaveText(
     "This file can't be imported.",
