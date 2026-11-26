@@ -42,37 +42,48 @@ export function useTasks(): {
 } {
   const [tasks, setTasks] = useState<Task[]>(loadTasks)
 
-  const commit = useCallback((next: Task[]) => {
-    setTasks(next)
-    saveItem(TASKS_KEY, next)
-  }, [])
+  // All mutations run through setTasks' updater so that several updates
+  // issued in the same tick compose instead of clobbering each other with
+  // a stale render-time snapshot. saveItem inside the updater is idempotent:
+  // in StrictMode the updater may run twice with the same prev, and both
+  // runs compute and persist the same next value.
+  const commit = useCallback(
+    (updater: (previous: Task[]) => Task[]) => {
+      setTasks((previous) => {
+        const next = updater(previous)
+        saveItem(TASKS_KEY, next)
+        return next
+      })
+    },
+    [],
+  )
 
   const addTask = useCallback(
     (text: string) => {
-      commit([
+      commit((previous) => [
         { id: crypto.randomUUID(), text, completed: false },
-        ...tasks,
+        ...previous,
       ])
     },
-    [commit, tasks],
+    [commit],
   )
 
   const toggleTask = useCallback(
     (id: string) => {
-      commit(
-        tasks.map((task) =>
+      commit((previous) =>
+        previous.map((task) =>
           task.id === id ? { ...task, completed: !task.completed } : task,
         ),
       )
     },
-    [commit, tasks],
+    [commit],
   )
 
   const removeTask = useCallback(
     (id: string) => {
-      commit(tasks.filter((task) => task.id !== id))
+      commit((previous) => previous.filter((task) => task.id !== id))
     },
-    [commit, tasks],
+    [commit],
   )
 
   return { tasks, addTask, toggleTask, removeTask }

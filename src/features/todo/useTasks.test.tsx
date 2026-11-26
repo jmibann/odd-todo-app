@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useTasks } from './useTasks.ts'
 
@@ -23,6 +23,9 @@ function Host() {
       </ul>
       <button type="button" onClick={() => addTask('Buy milk')}>
         add
+      </button>
+      <button type="button" onClick={() => addTask('Pay rent')}>
+        add second
       </button>
     </>
   )
@@ -117,5 +120,20 @@ describe('useTasks', () => {
     expect(stored()).toBe('[]')
     second.unmount()
     expect(stored()).toBe('[]')
+  })
+
+  it('applies two updates issued in the same tick (stale-closure guard)', () => {
+    render(<Host />)
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'add' }))
+      fireEvent.click(screen.getByRole('button', { name: 'add second' }))
+    })
+    const texts = [...screen.getByRole('list').children].map(
+      (li) => li.querySelector('span')?.textContent,
+    )
+    expect(texts).toEqual(['Pay rent', 'Buy milk'])
+    const storedTasks = JSON.parse(stored() ?? '[]')
+    expect(storedTasks).toHaveLength(2)
+    expect(storedTasks[0]?.text).toBe('Pay rent')
   })
 })
