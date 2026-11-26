@@ -20,8 +20,12 @@ const RULES: { name: string; pattern: RegExp }[] = [
     pattern: /\d+(?:\.\d+)?(?:px|rem)\b/,
   },
   {
+    name: 'raw duration',
+    pattern: /\d+(?:\.\d+)?(?:ms|s)\b/,
+  },
+  {
     name: 'raw viewport unit or %',
-    pattern: /\d+(?:\.\d+)?(?:vw|vh|vmin|vmax)\b|%/,
+    pattern: /\d+(?:\.\d+)?(?:[dsl]?v[wfh]|vmin|vmax)\b|%/,
   },
 ]
 
