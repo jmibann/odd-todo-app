@@ -191,8 +191,45 @@ odd/tasks/                # feature documents
 | Focused test | `pnpm vitest run <file>` |
 | Suite | `pnpm test` (`vitest run`; watch: `pnpm test:watch`) |
 | E2E | `pnpm exec playwright test` (Chromium; one-time `pnpm exec playwright install chromium`) |
-| Lint and types | `pnpm lint` (`eslint .`) · `pnpm exec tsc -b` (not `--noEmit`: the root tsconfig is solution-style, so plain `tsc --noEmit` checks no files) |
+| Lint and types | `pnpm lint` (`eslint .`) · `pnpm exec tsc -b --force` (checks all three projects: app, test, node. Not `--noEmit`: the root tsconfig is solution-style, so plain `tsc --noEmit` checks no files; not bare `tsc -b`: it is incremental and skips unchanged projects) |
 
 - **TypeScript pin:** `typescript` is `~6.0.3`, not 7.x: the current stable typescript-eslint
   (8.74.0) refuses to run on TS 7.0 (typescript-eslint#10940 tracks TS ≥7.1 support).
   Revisit the pin when a stable typescript-eslint supports TS 7.
+
+## B5. UI policy
+
+Styling approach: CSS Modules for components and CSS custom properties for design
+tokens. No CSS framework, no CSS-in-JS, no styling dependency.
+
+- **One token source:** all tokens live in `src/shared/styles/tokens.css`, the only
+  file where raw values (colors, radius, border widths, spacing, font sizes, shadows,
+  durations, viewport units, %) may appear. Components use them through `var(--…)`
+  only. Enforced by `src/shared/styles/token-discipline.test.ts`, which fails on raw
+  colors, px/rem numbers, keyword or literal font sizes, and raw vw/vh/% in every
+  `.css` file under `src/` except `tokens.css` itself, naming file and line.
+- **Semantic color tokens** (each with a light and a dark value; names describe purpose,
+  never the color itself): `--color-bg` page background · `--color-surface` cards and
+  controls · `--color-text` primary text · `--color-text-muted` secondary text ·
+  `--color-border` outlines and dividers · `--color-accent` primary actions and links ·
+  `--color-danger` destructive and error states · `--color-focus` focus ring.
+  Every text/background pair keeps WCAG AA: ≥ 4.5:1 normal text, ≥ 3:1 large text and
+  UI borders (recompute when values change, see `odd/tasks/ui-policy.md` L3).
+- **Themes:** light is the default; a dark palette applies when the OS prefers dark and
+  no user override exists; `data-theme="light|dark"` on `<html>` overrides the OS.
+  The user's choice is persisted through `src/shared/storage.ts` (invariant B3) and
+  managed by `src/shared/hooks/useTheme.ts`.
+- **Scales:** radius `--radius-sm|md|lg|full` · border `--border-width-thin|thick` ·
+  spacing `--space-xs|sm|md|lg|xl|2xl|3xl` · font size `--font-size-sm|base|lg|xl|2xl|3xl`
+  · shadow `--shadow-sm|md|lg` · duration `--duration-fast|base|slow`.
+- **Focus:** every interactive element has a visible `:focus-visible` style
+  (`outline: var(--focus-outline-width) solid var(--color-focus)` with
+  `outline-offset: var(--focus-outline-offset)`). An outline is never removed without
+  this replacement.
+- **Responsiveness is intrinsic:** layouts adapt with flex-wrap, grid auto-fit,
+  `min()`/`clamp()` — no media queries and no breakpoint tokens for now; a feature that
+  needs breakpoints decides how they enter this policy. Fluid values are tokens
+  (for example `--space-page: clamp(…)`); modules never use raw vw, vh or `%`.
+- **Adding a token:** only in `tokens.css`, with a semantic name for its purpose. Color
+  tokens get light and dark values that meet the AA ratios above; add a comment stating
+  what it is for. The scanner and the token file's contrast header are the gate.
