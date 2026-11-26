@@ -205,9 +205,12 @@ tokens. No CSS framework, no CSS-in-JS, no styling dependency.
 - **One token source:** all tokens live in `src/shared/styles/tokens.css`, the only
   file where raw values (colors, radius, border widths, spacing, font sizes, shadows,
   durations, viewport units, %) may appear. Components use them through `var(--…)`
-  only. Enforced by `src/shared/styles/token-discipline.test.ts`, which fails on raw
-  colors, px/rem numbers, keyword or literal font sizes, and raw vw/vh/% in every
-  `.css` file under `src/` except `tokens.css` itself, naming file and line.
+  only. Enforced by `src/shared/styles/token-discipline.test.ts` as an allowlist, not
+  a unit list: in any `.css` file except `tokens.css`, every number with a unit, every
+  `%`, every hex and every color function fails, case-insensitively; allowed are simple
+  `var(--…)` references, unitless numbers and keywords. Unitless numbers (z-index,
+  opacity, line-height, flex) are allowed in modules. Font sizes must reference a
+  token. Failures name file and line.
 - **Semantic color tokens** (each with a light and a dark value; names describe purpose,
   never the color itself): `--color-bg` page background · `--color-surface` cards and
   controls · `--color-text` primary text · `--color-text-muted` secondary text ·
