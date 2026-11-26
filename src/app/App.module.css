@@ -2,14 +2,20 @@
 
 .page {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
+  flex-direction: column;
+  gap: var(--space-xl);
   min-height: var(--size-viewport-min-height);
   padding: var(--space-page);
   background-color: var(--color-bg);
   color: var(--color-text);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
 }
 
 .heading {
