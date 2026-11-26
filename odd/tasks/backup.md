@@ -23,14 +23,14 @@ S8. Out of scope — "Out of scope: merging an import with the current list, clo
 
 ## Tasks
 
-- [ ] T1 (all) inline · this document, L1 verbatim, branch `feat/backup` · Risk: none · evidence: file
-- [ ] T2 (S3) inline · `src/shared/taskText.ts`: extracted todo-core S1 rules (MAX 120, empty/length predicates) as pure functions; `TaskForm` consumes them · Risk: item 3 (shared rule contract consumed by TaskForm and backup) · evidence: RED→GREEN on predicates; existing TaskForm tests untouched and green (S1 behavior preserved)
-- [ ] T3 (S1, S3, S5, S6) inline · `src/features/backup/backupFormat.ts`: `serializeBackup(tasks, now)` + `backupFileName(now)` (local date) + `parseBackup(text, maxBytes)` whole-reject parser (version gate, per-task S1 validation, unknown fields dropped, ids regenerated, text as-is) · Risk: item 3 (the file contract) · evidence: RED→GREEN per rule incl. 120 boundary and field dropping
-- [ ] T4 (S4) inline · `useTasks`: add `replaceTasks(next)` with the same functional-updater persist semantics · Risk: item 3 (hook API extension) · evidence: RED→GREEN + no-write-on-mount kept
-- [ ] T5 (S1–S3, S6) inline · `BackupControls.tsx` + module css: "Export tasks" (Blob download), "Import tasks" file input (accept .json, accessible name, reset after pick), 1 MB pre-check on File.size, confirmation panel "Replace current tasks (N) with imported tasks (M)?" + "Replace"/"Cancel" (Cancel = observable no-op), invalid → "This file can't be imported." · Risk: item 1 (the confirm gate protecting user data) · evidence: RED→GREEN per rule
-- [ ] T6 (S7) inline · compose in App; scanner green on new CSS · Risk: item 3 (App composition) · evidence: existing App/e2e tests green
-- [ ] T7 (S1–S4, S7) inline · e2e: export download filename + content; wipe → import → Replace → reload survives; empty-list export; invalid file leaves list AND stored bytes untouched; 375px no horizontal scroll · Risk: none (tests) · evidence: `pnpm exec playwright test`
-- [ ] T8 (all) inline · B4 gates + verifier (items 1, 3, 5 high tier) + close · Risk: verified by `verifier` · evidence: outputs + verdict
+- [x] T1 (all) inline · commit b67912f · this document, L1 verbatim, branch `feat/backup` · Risk: none · evidence: file (b67912f)
+- [x] T2 (S3) inline · commit 73342d7 · `src/shared/taskText.ts`: extracted todo-core S1 rules (MAX 120, empty/length predicates) as pure functions; `TaskForm` consumes them · Risk: item 3 (shared rule contract consumed by TaskForm and backup) · evidence: RED→GREEN on predicates; existing TaskForm tests untouched and green (S1 behavior preserved)
+- [x] T3 (S1, S3, S5, S6) inline · commits 01c0cc5 + 5ee7a06 · `src/features/backup/backupFormat.ts`: `serializeBackup(tasks, now)` + `backupFileName(now)` (local date) + `parseBackup(text, maxBytes)` whole-reject parser (version gate, per-task S1 validation, unknown fields dropped, ids regenerated, text as-is) · Risk: item 3 (the file contract) · evidence: RED→GREEN per rule incl. 120 boundary and field dropping
+- [x] T4 (S4) inline · commits 6397844 + 1c907a1 · `useTasks`: add `replaceTasks(next)` with the same functional-updater persist semantics · Risk: item 3 (hook API extension) · evidence: RED→GREEN + no-write-on-mount kept
+- [x] T5 (S1–S3, S6) inline · commits 0b095e7 + 5ee7a06 · `BackupControls.tsx` + module css: "Export tasks" (Blob download), "Import tasks" file input (accept .json, accessible name, reset after pick), 1 MB pre-check on File.size, confirmation panel "Replace current tasks (N) with imported tasks (M)?" + "Replace"/"Cancel" (Cancel = observable no-op), invalid → "This file can't be imported." · Risk: item 1 (the confirm gate protecting user data) · evidence: RED→GREEN per rule
+- [x] T6 (S7) inline · commit b294f38 · compose in App; scanner green on new CSS · Risk: item 3 (App composition) · evidence: existing App/e2e tests green
+- [x] T7 (S1–S4, S7) inline · commits bb4e56a + 5ee7a06 · e2e: export download filename + content; wipe → import → Replace → reload survives; empty-list export; invalid file leaves list AND stored bytes untouched; 375px no horizontal scroll · Risk: none (tests) · evidence: `pnpm exec playwright test`
+- [x] T8 (all) inline · verifier READY (L5) · B4 gates + verifier (items 1, 3, 5 high tier) + close · Risk: verified by `verifier` · evidence: outputs + verdict
 
 ## Log
 
@@ -53,3 +53,7 @@ L2 2026-11-26 user (verbatim): > 1. regenerate ids on import,  2.as-is
 > (resolution of the two format micro-decisions; the rest of the format and the plan approved with the subsequent go)
 
 L3 2026-11-26 next: T2.
+
+L4 2026-11-26 agent (process defect record): the verifier (L5) found that commits 01c0cc5, 6397844, 1c907a1 and bb4e56a carry their Risk line WITHOUT the blank-line separation, so git interpret-trailers cannot parse them — despite the convention adopted in todo-core L5.3. Not amended (no history rewrite; commits already referenced in this doc). Correction: commits from 5ee7a06 onward are trailer-parseable; this record closes the finding. The verifier's four transient probes are adopted as permanent regressions in 5ee7a06.
+
+L5 2026-11-26 agent (verifier verdict, range b67912f..bb4e56a): READY TO MERGE contingent on the L4 trailer record, now closed. B1–B8 PASS with byte/probe evidence (strict version gate, duplicate-id regeneration, padded text kept, exact-size accept/reject, size guard before read, single storage key, zero unsafe DOM sinks, user strings byte-match, scanner+focus+375 clean, zero new deps, no out-of-scope hits). B9 PARTIAL FAIL → fixed-forward via this record + trailer-parseable footers going forward. Gates: 11 files / 64 unit tests, 8 e2e, tsc -b --force, lint, scanner, integrity, vite build — all green at HEAD 5ee7a06. Carried questions for the user (not implemented): (1) parseBackup internal guard counts UTF-16 chars, not bytes (moot while the byte-accurate File.size pre-check is used); (2) exportedAt validated as string, not ISO-parsed; (3) e2e tmp files backup-good/bad.json lack cleanup.
