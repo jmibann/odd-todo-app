@@ -1,53 +1,176 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { parse as parseCss, type Root } from 'postcss'
+import valueParser from 'postcss-value-parser'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Enforces AGENTS.md B5 (L15: the scanner enforces the RULE, not a list of
- * units). Allowlist check on every .css file under src/ except
- * tokens.css: any number with a unit, any %, any hex and any color function
- * FAILS, case-insensitively. Allowed: var(--…), unitless numbers, keywords.
- * Failures name file and line. No Stylelint, no new dependency.
+ * Enforces AGENTS.md B5 (L15 + L17: allowlist enforced on declaration
+ * VALUES via postcss + postcss-value-parser, not regex on lines).
+ * In any .css except tokens.css:
+ *  - any number with a unit fails (whitelist: fr, any amount)
+ *  - any % fails; any hex outside url() fails
+ *  - any color function fails (case-insensitive)
+ *  - named colors fail; only transparent, currentColor and the CSS-wide
+ *    keywords (inherit/initial/unset/revert/revert-layer) are allowed
+ *  - the first minmax() argument must be a simple var(--…) token
+ *  - font-size must reference a token
+ * Selectors, comments and url(…) contents are not declaration values and
+ * are never scanned. Failures name file and line.
  */
 
-const SIMPLE_VAR = /var\(--[\w-]+\)/gi
+const TOKENS_FILE = join('src', 'shared', 'styles', 'tokens.css')
 
-type Rule = { name: string; test: (stripped: string) => boolean }
+const COLOR_FUNCTIONS = new Set([
+  'rgb',
+  'rgba',
+  'hsl',
+  'hsla',
+  'hwb',
+  'lab',
+  'lch',
+  'oklab',
+  'oklch',
+  'color',
+  'color-mix',
+  'light-dark',
+])
 
-const RULES: Rule[] = [
-  {
-    name: 'number with unit',
-    test: (s) => /\d+(?:\.\d+)?[a-z]+/i.test(s),
-  },
-  {
-    name: 'percent',
-    test: (s) => s.includes('%'),
-  },
-  {
-    name: 'hex color',
-    test: (s) => /#[0-9a-f]{3,8}\b/i.test(s),
-  },
-  {
-    name: 'color function',
-    test: (s) =>
-      /\b(?:rgba?|hsla?|hwb|lab|lch|color(?:-mix)?|light-dark)\s*\(/i.test(s),
-  },
-]
+const ALLOWED_KEYWORDS = new Set([
+  'transparent',
+  'currentcolor',
+  'inherit',
+  'initial',
+  'unset',
+  'revert',
+  'revert-layer',
+])
 
-function scanLine(line: string): string[] {
-  const stripped = line.replace(SIMPLE_VAR, '')
-  const found = RULES.filter((rule) => rule.test(stripped)).map(
-    (rule) => rule.name,
-  )
-  // font-size must reference a token (checked on the declared value)
-  const fontSize = line.match(/\bfont-size\s*:\s*([^;{}]+)/i)
-  if (fontSize && !fontSize[1].trim().toLowerCase().startsWith('var(')) {
+const NAMED_COLORS = new Set([
+  'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure', 'beige',
+  'bisque', 'black', 'blanchedalmond', 'blue', 'blueviolet', 'brown',
+  'burlywood', 'cadetblue', 'chartreuse', 'chocolate', 'coral',
+  'cornflowerblue', 'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan',
+  'darkgoldenrod', 'darkgray', 'darkgreen', 'darkgrey', 'darkkhaki',
+  'darkmagenta', 'darkolivegreen', 'darkorange', 'darkorchid', 'darkred',
+  'darksalmon', 'darkseagreen', 'darkslateblue', 'darkslategray',
+  'darkslategrey', 'darkturquoise', 'darkviolet', 'deeppink', 'deepskyblue',
+  'dimgray', 'dimgrey', 'dodgerblue', 'firebrick', 'floralwhite',
+  'forestgreen', 'fuchsia', 'gainsboro', 'ghostwhite', 'gold', 'goldenrod',
+  'gray', 'green', 'greenyellow', 'grey', 'honeydew', 'hotpink', 'indianred',
+  'indigo', 'ivory', 'khaki', 'lavender', 'lavenderblush', 'lawngreen',
+  'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan',
+  'lightgoldenrodyellow', 'lightgray', 'lightgreen', 'lightgrey',
+  'lightpink', 'lightsalmon', 'lightseagreen', 'lightskyblue',
+  'lightslategray', 'lightslategrey', 'lightsteelblue', 'lightyellow',
+  'lime', 'limegreen', 'linen', 'magenta', 'maroon', 'mediumaquamarine',
+  'mediumblue', 'mediumorchid', 'mediumpurple', 'mediumseagreen',
+  'mediumslateblue', 'mediumspringgreen', 'mediumturquoise',
+  'mediumvioletred', 'midnightblue', 'mintcream', 'mistyrose', 'moccasin',
+  'navajowhite', 'navy', 'oldlace', 'olive', 'olivedrab', 'orange',
+  'orangered', 'orchid', 'palegoldenrod', 'palegreen', 'paleturquoise',
+  'palevioletred', 'papayawhip', 'peachpuff', 'peru', 'pink', 'plum',
+  'powderblue', 'purple', 'rebeccapurple', 'red', 'rosybrown', 'royalblue',
+  'saddlebrown', 'salmon', 'sandybrown', 'seagreen', 'seashell', 'sienna',
+  'silver', 'skyblue', 'slateblue', 'slategray', 'slategrey', 'snow',
+  'springgreen', 'steelblue', 'tan', 'teal', 'thistle', 'tomato',
+  'turquoise', 'violet', 'wheat', 'white', 'whitesmoke', 'yellow',
+  'yellowgreen',
+])
+
+const NUMBER_WITH_UNIT = /^[-+]?(?:\d+(?:\.\d+)?|\.\d+)([a-z]+|%)$/i
+
+type VNode = {
+  type: string
+  value: string
+  nodes?: VNode[]
+}
+
+function checkWord(raw: string): string[] {
+  const word = raw.toLowerCase()
+  if (ALLOWED_KEYWORDS.has(word)) return []
+  if (word.startsWith('--')) return []
+  const found: string[] = []
+  if (/%/.test(raw)) found.push('percent')
+  if (raw.startsWith('#')) found.push('hex outside url')
+  const m = NUMBER_WITH_UNIT.exec(raw)
+  if (m && m[1] !== 'fr') found.push('number with unit')
+  if (NAMED_COLORS.has(word)) found.push('named color')
+  return found
+}
+
+function checkNodes(nodes: VNode[]): string[] {
+  const found: string[] = []
+  for (const node of nodes) {
+    if (node.type === 'function') {
+      const name = node.value.toLowerCase()
+      if (name === 'url') continue
+      if (COLOR_FUNCTIONS.has(name)) found.push('color function')
+      const args: VNode[] = node.nodes ?? []
+      if (name === 'minmax') {
+        const divAt = args.findIndex((a) => a.type === 'div')
+        const firstArg = (divAt === -1 ? args : args.slice(0, divAt)).filter(
+          (a) => a.type !== 'space',
+        )
+        const token = firstArg[0]
+        const inner = (token?.nodes ?? []).filter((a) => a.type !== 'space')
+        const isSimpleVar =
+          firstArg.length === 1 &&
+          token?.type === 'function' &&
+          token.value.toLowerCase() === 'var' &&
+          inner.length === 1 &&
+          inner[0]?.type === 'word' &&
+          /^--[\w-]+$/.test(inner[0].value)
+        if (!isSimpleVar) {
+          found.push('minmax first argument outside tokens')
+        }
+      }
+      found.push(...checkNodes(args as VNode[]))
+      continue
+    }
+    if (node.type === 'word') {
+      found.push(...checkWord(node.value))
+      continue
+    }
+    if (node.type === 'string') {
+      const v = node.value
+      const m = NUMBER_WITH_UNIT.exec(v)
+      if (m && m[1] !== 'fr') found.push('number with unit')
+      if (v.includes('%')) found.push('percent')
+      if (v.startsWith('#')) found.push('hex outside url')
+      continue
+    }
+  }
+  return found
+}
+
+function declViolations(prop: string, value: string): string[] {
+  const found = checkNodes(valueParser(value).nodes as VNode[])
+  if (
+    prop.toLowerCase() === 'font-size' &&
+    !value.trim().toLowerCase().startsWith('var(')
+  ) {
     found.push('font size outside tokens')
   }
   return found
 }
 
-const TOKENS_FILE = join('src', 'shared', 'styles', 'tokens.css')
+function scanCss(css: string): string[] {
+  const out: string[] = []
+  let root: Root
+  try {
+    root = parseCss(css)
+  } catch (e) {
+    return [`unparseable css → ${String(e).slice(0, 90)}`]
+  }
+  root.walkDecls((decl) => {
+    for (const name of new Set(declViolations(decl.prop, decl.value))) {
+      const line = decl.source?.start?.line ?? 1
+      out.push(`${line}: ${name} → "${decl.prop}: ${decl.value}"`)
+    }
+  })
+  return out
+}
 
 function cssFiles(dir: string): string[] {
   const found: string[] = []
@@ -70,65 +193,93 @@ describe('B5 token discipline', () => {
     const violations: string[] = []
     const files = cssFiles(join(process.cwd(), 'src'))
     expect(files.length).toBeGreaterThan(0)
-
     for (const file of files) {
-      const lines = readFileSync(file, 'utf8').split(/\r?\n/)
-      lines.forEach((line, index) => {
-        const trimmed = line.trim()
-        if (trimmed.startsWith('/*') || trimmed.startsWith('*')) return
-        for (const name of scanLine(line)) {
-          violations.push(
-            `${relative(process.cwd(), file)}:${index + 1}: ${name} → "${trimmed}"`,
-          )
-        }
-      })
+      for (const hit of scanCss(readFileSync(file, 'utf8'))) {
+        violations.push(`${relative(process.cwd(), file)}:${hit}`)
+      }
     }
-
     expect(violations).toEqual([])
   })
 })
 
 describe('B5 scanner rules (regression fixtures)', () => {
-  const fires = (ruleName: string, line: string): boolean => {
-    if (ruleName === 'font size outside tokens') {
-      return scanLine(line).includes(ruleName)
-    }
-    const stripped = line.replace(SIMPLE_VAR, '')
-    const rule = RULES.find((r) => r.name === ruleName)
-    expect(rule, `rule ${ruleName} exists`).toBeTruthy()
-    return rule?.test(stripped) ?? false
-  }
+  const fires = (ruleName: string, value: string, prop = 'color'): boolean =>
+    declViolations(prop, value).includes(ruleName)
 
   it('flags the raw values L10.2 named', () => {
-    expect(fires('number with unit', 'transition: color 300ms;')).toBe(true)
-    expect(fires('number with unit', 'animation: x 2s;')).toBe(true)
-    expect(fires('number with unit', 'min-height: 100dvh;')).toBe(true)
-    expect(fires('number with unit', 'width: 50svw;')).toBe(true)
-    expect(fires('percent', 'padding: 2%;')).toBe(true)
-    expect(fires('hex color', 'color: #123456;')).toBe(true)
-    expect(fires('number with unit', 'margin: 4px;')).toBe(true)
+    expect(fires('number with unit', '300ms', 'transition-duration')).toBe(true)
+    expect(fires('number with unit', '2s', 'animation-duration')).toBe(true)
+    expect(fires('number with unit', '100dvh', 'min-height')).toBe(true)
+    expect(fires('number with unit', '50svw', 'width')).toBe(true)
+    expect(fires('percent', '2%', 'padding')).toBe(true)
+    expect(fires('hex outside url', '#123456')).toBe(true)
+    expect(fires('number with unit', '4px', 'margin')).toBe(true)
   })
 
   it('does not flag token usage or unitless values', () => {
     expect(
-      fires('number with unit', 'transition: color var(--duration-fast) ease;'),
+      fires('number with unit', 'var(--duration-fast) ease', 'transition'),
     ).toBe(false)
-    expect(fires('number with unit', 'z-index: 10;')).toBe(false)
-    expect(fires('number with unit', 'flex: 1 1 0;')).toBe(false)
-    expect(fires('number with unit', 'opacity: 0.5;')).toBe(false)
-    expect(fires('number with unit', 'line-height: 1.5;')).toBe(false)
+    expect(fires('number with unit', '10', 'z-index')).toBe(false)
+    expect(fires('number with unit', '1 1 0', 'flex')).toBe(false)
+    expect(fires('number with unit', '0.5', 'opacity')).toBe(false)
+    expect(fires('number with unit', '1.5', 'line-height')).toBe(false)
     expect(
-      fires('number with unit', 'height: var(--size-viewport-min-height);'),
+      fires('number with unit', 'var(--size-viewport-min-height)', 'height'),
     ).toBe(false)
   })
 
   it('flags case-variants and container units (L15 positives)', () => {
-    expect(fires('number with unit', 'width: 10PX;')).toBe(true)
-    expect(fires('number with unit', 'width: 50cqw;')).toBe(true)
-    expect(fires('number with unit', 'transition: all 300MS;')).toBe(true)
-    expect(fires('number with unit', 'height: 100DVH;')).toBe(true)
-    expect(fires('hex color', 'color: #FFF;')).toBe(true)
-    expect(fires('color function', 'color: RGBA(1, 2, 3, 0.5);')).toBe(true)
-    expect(fires('color function', 'color: rgb(1, 2, 3);')).toBe(true)
+    expect(fires('number with unit', '10PX', 'width')).toBe(true)
+    expect(fires('number with unit', '50cqw', 'width')).toBe(true)
+    expect(fires('number with unit', '300MS', 'transition-duration')).toBe(true)
+    expect(fires('number with unit', '100DVH', 'min-height')).toBe(true)
+    expect(fires('hex outside url', '#FFF')).toBe(true)
+    expect(fires('color function', 'RGBA(1, 2, 3, 0.5)')).toBe(true)
+    expect(fires('color function', 'rgb(1, 2, 3)')).toBe(true)
+  })
+
+  it('bans named colors, allows the documented keyword set (L17.1)', () => {
+    expect(fires('named color', 'white')).toBe(true)
+    expect(fires('named color', 'RebeccaPurple')).toBe(true)
+    expect(fires('named color', 'darkred')).toBe(true)
+    expect(fires('named color', 'transparent')).toBe(false)
+    expect(fires('named color', 'currentColor')).toBe(false)
+    expect(fires('named color', 'inherit')).toBe(false)
+    expect(fires('named color', 'initial')).toBe(false)
+    expect(fires('named color', 'unset')).toBe(false)
+    expect(fires('named color', 'revert')).toBe(false)
+    expect(fires('named color', 'var(--color-text)')).toBe(false)
+  })
+
+  it('whitelists fr but keeps minmax first argument token-only (L17.2)', () => {
+    expect(fires('number with unit', '1fr', 'grid-template-columns')).toBe(false)
+    expect(fires('number with unit', '2.5fr', 'grid-template-columns')).toBe(false)
+    expect(
+      declViolations(
+        'grid-template-columns',
+        'repeat(auto-fit, minmax(var(--x), 1fr))',
+      ),
+    ).toEqual([])
+    expect(
+      fires('minmax first argument outside tokens', 'minmax(10px, 1fr)'),
+    ).toBe(true)
+  })
+
+  it('never scans selectors, comments or url contents (L17.3 probes)', () => {
+    expect(
+      scanCss('.a:nth-child(2n + 1) { color: var(--color-text); }'),
+    ).toEqual([])
+    expect(scanCss('.a { background: url(#abc); }')).toEqual([])
+    expect(scanCss('/* legacy 10px */\n.a { color: var(--color-text); }')).toEqual([])
+    expect(scanCss('.a { background: white; }')).toEqual([
+      '1: named color → "background: white"',
+    ])
+    expect(
+      scanCss('.a { grid-template-columns: repeat(auto-fit, minmax(var(--x), 1fr)); }'),
+    ).toEqual([])
+    expect(scanCss('.a { font-size: large; }')).toEqual([
+      '1: font size outside tokens → "font-size: large"',
+    ])
   })
 })
