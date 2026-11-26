@@ -5,7 +5,7 @@ import { useTasks } from './useTasks.ts'
 const FULL_KEY = ['odd-todo-app', 'tasks'].join(':')
 
 function Host() {
-  const { tasks, addTask, toggleTask, removeTask } = useTasks()
+  const { tasks, addTask, toggleTask, removeTask, replaceTasks } = useTasks()
   return (
     <>
       <ul>
@@ -26,6 +26,17 @@ function Host() {
       </button>
       <button type="button" onClick={() => addTask('Pay rent')}>
         add second
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          replaceTasks([
+            { id: 'imp-1', text: 'Imported', completed: true },
+            { id: 'imp-2', text: 'Also imported', completed: false },
+          ])
+        }
+      >
+        replace
       </button>
     </>
   )
@@ -135,5 +146,25 @@ describe('useTasks', () => {
     const storedTasks = JSON.parse(stored() ?? '[]')
     expect(storedTasks).toHaveLength(2)
     expect(storedTasks[0]?.text).toBe('Pay rent')
+  })
+})
+
+describe('useTasks replaceTasks (backup S4)', () => {
+  it('swaps the whole list, persists, and survives remount', () => {
+    window.localStorage.clear()
+    render(<Host />)
+    fireEvent.click(screen.getByRole('button', { name: 'add' }))
+    fireEvent.click(screen.getByRole('button', { name: 'replace' }))
+    expect(screen.getByRole('list').textContent).toContain('Imported')
+    expect(screen.getByRole('list').textContent).not.toContain('Buy milk')
+    const raw = stored()
+    expect(raw).toContain('"completed":true')
+    cleanup()
+
+    render(<Host />)
+    const texts = [...screen.getByRole('list').children].map(
+      (li) => li.querySelector('span')?.textContent,
+    )
+    expect(texts).toEqual(['Imported', 'Also imported'])
   })
 })

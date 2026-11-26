@@ -39,6 +39,7 @@ export function useTasks(): {
   addTask: (text: string) => void
   toggleTask: (id: string) => void
   removeTask: (id: string) => void
+  replaceTasks: (next: Task[]) => void
 } {
   const [tasks, setTasks] = useState<Task[]>(loadTasks)
 
@@ -86,5 +87,14 @@ export function useTasks(): {
     [commit],
   )
 
-  return { tasks, addTask, toggleTask, removeTask }
+  // Backup import (odd/tasks/backup.md S4): a user-confirmed full swap,
+  // persisted like any other mutation.
+  const replaceTasks = useCallback(
+    (next: Task[]) => {
+      commit(() => next)
+    },
+    [commit],
+  )
+
+  return { tasks, addTask, toggleTask, removeTask, replaceTasks }
 }
