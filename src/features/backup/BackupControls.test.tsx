@@ -175,6 +175,29 @@ describe('BackupControls import (S2, S3)', () => {
     expect(screen.queryByText(/^Replace current tasks/)).toBeNull()
   })
 
+  it('an oversized file is rejected before its content is read (verifier probe)', async () => {
+    const { onReplace, fileInput } = setup()
+    const textSpy = vi.spyOn(File.prototype, 'text')
+    const big = new File([' '.repeat(1024 * 1024 + 1)], 'big.json')
+    await pickFile(fileInput, big)
+    expect(textSpy).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert').textContent).toBe(
+      "This file can't be imported.",
+    )
+    expect(onReplace).not.toHaveBeenCalled()
+  })
+
+  it('picking an invalid file closes an open confirmation (verifier probe)', async () => {
+    const { fileInput } = setup()
+    await pickFile(fileInput, validFile([{ id: 'z', text: 'New', completed: false }]))
+    expect(screen.getByText(/^Replace current tasks/)).toBeTruthy()
+    await pickFile(fileInput, new File(['{bad'], 'x.json'))
+    expect(screen.queryByText(/^Replace current tasks/)).toBeNull()
+    expect(screen.getByRole('alert').textContent).toBe(
+      "This file can't be imported.",
+    )
+  })
+
   it('a valid file clears a previous error', async () => {
     const { fileInput } = setup()
     await pickFile(fileInput, new File(['{bad'], 'x.json'))

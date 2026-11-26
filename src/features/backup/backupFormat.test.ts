@@ -133,6 +133,33 @@ describe('backup file contract (S5)', () => {
     expect(parseBackup(wrap([' fine ']))).not.toBeNull()
   })
 
+  it('round-trips serialize→parse idempotently, modulo ids (verifier probe)', () => {
+    const file = serializeBackup(tasks, new Date('2026-11-26T12:00:00.000Z'))
+    const parsed = parseBackup(file)
+    expect(parsed).not.toBeNull()
+    const again = serializeBackup(parsed as Task[], new Date('2026-11-26T12:00:00.000Z'))
+    expect(JSON.parse(again).tasks.map((t: Task) => [t.text, t.completed])).toEqual(
+      tasks.map((t) => [t.text, t.completed]),
+    )
+  })
+
+  it('enforces the exact size boundary: MAX accepted, MAX+1 rejected', () => {
+    const envelope = {
+      format: BACKUP_FORMAT,
+      version: 1,
+      exportedAt: '2026-11-26T12:00:00.000Z',
+      pad: '',
+      tasks: [{ id: 'a', text: 'ok', completed: false }],
+    }
+    const filler = (size: number) =>
+      JSON.stringify({ ...envelope, pad: 'x'.repeat(size) }).length
+    const padLength = MAX_BACKUP_BYTES - filler(0)
+    const atLimit = JSON.stringify({ ...envelope, pad: 'x'.repeat(padLength) })
+    expect(atLimit.length).toBe(MAX_BACKUP_BYTES)
+    expect(parseBackup(atLimit)).not.toBeNull()
+    expect(parseBackup(`${atLimit}y`)).toBeNull()
+  })
+
   it('rejects oversized sources', () => {
     const big = JSON.stringify({
       format: BACKUP_FORMAT,
