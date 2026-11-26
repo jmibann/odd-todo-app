@@ -24,9 +24,9 @@ function filesUnder(dir: string): string[] {
 }
 
 describe('source integrity', () => {
-  it('no file under src/ or e2e/ contains the corrupted asterisk literal', () => {
+  it('no file under src/, e2e/ or odd/ contains the corrupted asterisk literal', () => {
     const hits: string[] = []
-    for (const root of ['src', 'e2e']) {
+    for (const root of ['src', 'e2e', 'odd']) {
       for (const file of filesUnder(root)) {
         const lines = readFileSync(file, 'utf8').split(/\r?\n/)
         lines.forEach((line, index) => {
