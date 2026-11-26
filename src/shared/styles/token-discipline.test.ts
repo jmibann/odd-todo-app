@@ -94,7 +94,7 @@ function checkWord(raw: string): string[] {
   if (/%/.test(raw)) found.push('percent')
   if (raw.startsWith('#')) found.push('hex outside url')
   const m = NUMBER_WITH_UNIT.exec(raw)
-  if (m && m[1] !== 'fr') found.push('number with unit')
+  if (m && m[1].toLowerCase() !== 'fr') found.push('number with unit')
   if (NAMED_COLORS.has(word)) found.push('named color')
   return found
 }
@@ -142,7 +142,7 @@ function checkNodes(nodes: VNode[]): string[] {
     if (node.type === 'string') {
       const v = node.value
       const m = NUMBER_WITH_UNIT.exec(v)
-      if (m && m[1] !== 'fr') found.push('number with unit')
+      if (m && m[1].toLowerCase() !== 'fr') found.push('number with unit')
       if (v.includes('%')) found.push('percent')
       if (v.startsWith('#')) found.push('hex outside url')
       continue
@@ -295,6 +295,11 @@ describe('B5 scanner rules (regression fixtures)', () => {
   it('whitelists fr but keeps minmax first argument token-only (L17.2)', () => {
     expect(fires('number with unit', '1fr', 'grid-template-columns')).toBe(false)
     expect(fires('number with unit', '2.5fr', 'grid-template-columns')).toBe(false)
+    expect(fires('number with unit', '1FR', 'grid-template-columns')).toBe(false)
+    expect(fires('number with unit', '2Fr', 'grid-template-columns')).toBe(false)
+    expect(
+      fires('minmax first argument outside tokens', 'minmax(var(--x, 10px), 1fr)'),
+    ).toBe(true)
     expect(
       declViolations(
         'grid-template-columns',
@@ -327,6 +332,7 @@ describe('B5 scanner rules (regression fixtures)', () => {
     expect(
       scanCss('@media (max-width: 640px) { .a { color: var(--color-text); } }'),
     ).toEqual(['1: number with unit → "@media (max-width: 640px)"'])
+    expect(fires('font size outside tokens', 'VAR(--x)', 'font-size')).toBe(false)
     expect(scanCss('.a { font-size: large; }')).toEqual([
       '1: font size outside tokens → "font-size: large"',
     ])
