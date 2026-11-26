@@ -205,13 +205,13 @@ tokens. No CSS framework, no CSS-in-JS, no styling dependency.
 - **One token source:** all tokens live in `src/shared/styles/tokens.css`, the only
   file where raw values may appear. Components use them through `var(--…)` only.
   Enforced by `src/shared/styles/token-discipline.test.ts` as an allowlist over
-  declaration VALUES (postcss + postcss-value-parser — selectors, comments and
-  `url(…)` contents are not values and are never scanned): in any `.css` file except
+  declaration VALUES and at-rule PARAMS (postcss + postcss-value-parser — selectors,
+  comments and `url(…)` contents are never scanned): in any `.css` file except
   `tokens.css`, every number with a unit (except `fr` at any amount), every `%`, every
   hex and every color function fails, case-insensitively; `minmax()`'s first argument
-  must be a simple `var(--…)` token; font sizes must reference a token. Named colors
-  are banned — only `transparent`, `currentColor` and the CSS-wide keywords
-  (`inherit`, `initial`, `unset`, `revert`, `revert-layer`) pass among keywords.
+  must be a simple `var(--…)` token or unitless `0`; font sizes must reference a token.
+  Named colors are banned — only `transparent`, `currentColor` and the CSS-wide
+  keywords (`inherit`, `initial`, `unset`, `revert`) pass among keywords.
   Unitless numbers (z-index, opacity, line-height, flex) are allowed in modules.
   Failures name file and line.
 - **Semantic color tokens** (each with a light and a dark value; names describe purpose,
