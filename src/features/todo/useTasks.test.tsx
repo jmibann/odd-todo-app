@@ -96,6 +96,14 @@ describe('useTasks', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^toggle:/ }))
     expect(screen.getByRole('list').textContent).toContain('[x] Buy milk')
+
+    // unchecking restores it (S3)
+    fireEvent.click(screen.getByRole('button', { name: /^toggle:/ }))
+    expect(screen.getByRole('list').textContent).toContain('Buy milk')
+    expect(stored()).toContain('"completed":false')
+    expect(screen.getByRole('list').textContent).not.toContain('[x] Buy milk')
+    fireEvent.click(screen.getByRole('button', { name: /^toggle:/ }))
+    expect(screen.getByRole('list').textContent).toContain('[x] Buy milk')
     first.unmount()
 
     // reload with the stored value: completed state survived
