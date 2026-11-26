@@ -79,3 +79,32 @@ describe('B5 token discipline', () => {
     expect(violations).toEqual([])
   })
 })
+
+describe('B5 scanner rules (regression fixtures)', () => {
+  // Guards the gate itself: if a RULES regex is ever broken, these fail even
+  // though the repo scan stays green. Proven by the verifier on HEAD e349aab.
+  const fires = (ruleName: string, line: string): boolean => {
+    const rule = RULES.find((r) => r.name === ruleName)
+    expect(rule, `rule ${ruleName} exists`).toBeTruthy()
+    return new RegExp(rule?.pattern.source ?? '').test(line)
+  }
+
+  it('flags the raw values L10.2 named', () => {
+    expect(fires('raw duration', 'transition: color 300ms;')).toBe(true)
+    expect(fires('raw duration', 'animation: x 2s;')).toBe(true)
+    expect(fires('raw viewport unit or %', 'min-height: 100dvh;')).toBe(true)
+    expect(fires('raw viewport unit or %', 'width: 50svw;')).toBe(true)
+    expect(fires('raw viewport unit or %', 'padding: 2%;')).toBe(true)
+    expect(fires('raw color', 'color: #123456;')).toBe(true)
+    expect(fires('px/rem value', 'margin: 4px;')).toBe(true)
+  })
+
+  it('does not flag token usage or unitless values', () => {
+    expect(fires('raw duration', 'transition: color var(--duration-fast) ease;')).toBe(false)
+    expect(fires('px/rem value', 'z-index: 10;')).toBe(false)
+    expect(fires('px/rem value', 'flex: 1 1 0;')).toBe(false)
+    expect(fires('px/rem value', 'opacity: 0.5;')).toBe(false)
+    expect(fires('px/rem value', 'line-height: 1.5;')).toBe(false)
+    expect(fires('raw viewport unit or %', 'height: var(--size-viewport-min-height);')).toBe(false)
+  })
+})
