@@ -13,6 +13,23 @@ export const BACKUP_FORMAT = 'odd-todo-app/backup'
 export const BACKUP_VERSION = 1
 export const MAX_BACKUP_BYTES = 1024 * 1024
 
+/*
+ * exportedAt must be an ISO 8601 INSTANT: date, time and an explicit
+ * timezone (Z or ±HH:MM) — matching what serializeBackup writes via
+ * Date#toISOString and any offset-equivalent instant a user hand-edits.
+ * Date-only or timezone-less strings are ambiguous, so they are rejected.
+ */
+const ISO_INSTANT =
+  /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$/
+
+function isIsoInstant(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    ISO_INSTANT.test(value) &&
+    !Number.isNaN(Date.parse(value))
+  )
+}
+
 function pad(value: number, size: number): string {
   return String(value).padStart(size, '0')
 }
@@ -65,7 +82,7 @@ export function parseBackup(source: string): Task[] | null {
   if (!isPlainObject(raw)) return null
   if (raw.format !== BACKUP_FORMAT) return null
   if (raw.version !== BACKUP_VERSION) return null
-  if (typeof raw.exportedAt !== 'string') return null
+  if (!isIsoInstant(raw.exportedAt)) return null
   if (!Array.isArray(raw.tasks)) return null
   if (!raw.tasks.every(isBackupTaskElement)) return null
   return raw.tasks.map((element) => ({

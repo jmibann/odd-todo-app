@@ -160,6 +160,28 @@ describe('backup file contract (S5)', () => {
     expect(parseBackup(`${atLimit}y`)).toBeNull()
   })
 
+  it('accepts only ISO 8601 instants for exportedAt (timezone required)', () => {
+    const wrap = (exportedAt: unknown) =>
+      JSON.stringify({
+        format: BACKUP_FORMAT,
+        version: 1,
+        exportedAt,
+        tasks: [{ id: 'a', text: 'ok', completed: false }],
+      })
+    // canonical UTC output of serializeBackup
+    expect(parseBackup(wrap('2026-11-26T12:00:00.000Z'))).not.toBeNull()
+    // explicit non-UTC offsets are valid ISO instants
+    expect(parseBackup(wrap('2026-11-26T14:00:00+02:00'))).not.toBeNull()
+    expect(parseBackup(wrap('2026-11-26t12:00:00.000z'))).not.toBeNull()
+    // rejected: not an instant (date only, no timezone, garbage, impossible)
+    expect(parseBackup(wrap('2026-11-26'))).toBeNull()
+    expect(parseBackup(wrap('2026-11-26T12:00:00'))).toBeNull()
+    expect(parseBackup(wrap('last tuesday')))
+      .toBeNull()
+    expect(parseBackup(wrap('2026-13-45T12:00:00Z'))).toBeNull()
+    expect(parseBackup(wrap(1700000000000))).toBeNull()
+  })
+
   it('rejects oversized sources', () => {
     const big = JSON.stringify({
       format: BACKUP_FORMAT,
