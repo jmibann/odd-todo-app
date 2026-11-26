@@ -63,10 +63,30 @@ describe('useTheme', () => {
     // override wins over the OS
     act(() => changeSystemTheme(false))
     expect(document.documentElement.dataset.theme).toBe('light')
+  })
 
-    // reload: stored choice survives
+  it('treats a stored value other than light/dark as no stored preference', () => {
+    // seed a corrupt entry the way broken storage would present it
+    window.localStorage.setItem('odd-todo-app:theme', '"bogus"')
+    stubMatchMedia(false)
+    render(<Host />)
+
+    // follows the OS instead, and the corrupt entry is not rewritten
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(
+      window.localStorage.getItem('odd-todo-app:theme'),
+    ).toBe('"bogus"')
+
+    // only a user toggle overwrites it, with a valid value
+    fireEvent.click(screen.getByRole('button', { name: 'theme: light' }))
+    expect(
+      window.localStorage.getItem('odd-todo-app:theme'),
+    ).toBe('"dark"')
+    expect(document.documentElement.dataset.theme).toBe('dark')
+
+    // reload: the healed stored choice wins over the OS
     cleanup()
     render(<Host />)
-    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(document.documentElement.dataset.theme).toBe('dark')
   })
 })

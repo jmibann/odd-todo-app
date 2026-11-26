@@ -12,15 +12,18 @@ function systemTheme(): Theme {
     : 'light'
 }
 
+function readStoredTheme(): Theme | null {
+  const value = loadItem<unknown>(THEME_KEY, null)
+  return value === 'light' || value === 'dark' ? value : null
+}
+
 /**
  * Theme state for the whole app (AGENTS.md B5):
  * follows the OS by default, a user override is persisted through
  * src/shared/storage.ts and wins over the OS on the next load.
  */
 export function useTheme(): { theme: Theme; toggleTheme: () => void } {
-  const [stored, setStored] = useState<Theme | null>(() =>
-    loadItem<Theme | null>(THEME_KEY, null),
-  )
+  const [stored, setStored] = useState<Theme | null>(readStoredTheme)
   const [preferred, setPreferred] = useState<Theme>(systemTheme)
   const theme: Theme = stored ?? preferred
 
