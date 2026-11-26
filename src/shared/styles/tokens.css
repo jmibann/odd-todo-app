@@ -1,0 +1,106 @@
+/*
+ * Design tokens — AGENTS.md B5 UI policy.
+ * This is the ONLY file in src/ where raw values (colors, px, rem, %,
+ * viewport units, durations) may appear. Components consume tokens via
+ * var(--…) only.
+ *
+ * Contrast (WCAG 2.1, computed; see odd/tasks/ui-policy.md L3):
+ *   light  text 16.60/17.79  muted 6.02/6.46  accent 6.21/6.65  danger 6.13/6.57  border 3.48/3.73
+ *   dark   text 16.14/14.65  muted 7.44/6.75  accent 7.48/6.79  danger 6.52/5.92  border 3.70/3.36
+ *   (format: on --color-bg / on --color-surface; text pairs ≥ 4.5, border ≥ 3)
+ */
+
+/* ---- Scales (theme-independent) ---- */
+:root {
+  /* radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* border widths */
+  --border-width-thin: 1px;
+  --border-width-thick: 2px;
+
+  /* spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+  /* fluid page padding (B5: fluid values are tokens) */
+  --space-page: clamp(var(--space-lg), 5vw, var(--space-3xl));
+
+  /* font sizes */
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  --font-size-3xl: 2.5rem;
+
+  /* viewport-derived sizes */
+  --size-viewport-min-height: 100dvh;
+
+  /* durations */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+
+  /* focus (B5: :focus-visible, never removed without replacement) */
+  --focus-outline-width: 3px;
+  --focus-outline-offset: 2px;
+}
+
+/* ---- Light palette: default, and the explicit override ---- */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-text: #14181f;
+  --color-text-muted: #52606d;
+  --color-border: #7d8590;
+  --color-accent: #1b4fd8;
+  --color-danger: #b42318;
+  --color-focus: #1b4fd8;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+/* ---- Dark palette: explicit override ---- */
+[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #101318;
+  --color-surface: #191d24;
+  --color-text: #eceff3;
+  --color-text-muted: #9aa5b1;
+  --color-border: #66707d;
+  --color-accent: #7aa2ff;
+  --color-danger: #f4715b;
+  --color-focus: #7aa2ff;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* ---- Dark palette: OS default when the user has not overridden ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --color-bg: #101318;
+    --color-surface: #191d24;
+    --color-text: #eceff3;
+    --color-text-muted: #9aa5b1;
+    --color-border: #66707d;
+    --color-accent: #7aa2ff;
+    --color-danger: #f4715b;
+    --color-focus: #7aa2ff;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  }
+}
