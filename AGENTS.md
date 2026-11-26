@@ -1,7 +1,9 @@
 # odd-todo-app
 
 A practice app: a to-do list in React + TypeScript, built with **Organic Driven Development (ODD)**.
-The project has no code yet: the first request includes the scaffolding.
+Built and green: React 19 + Vite + TypeScript scaffold, the B5 UI policy (tokens,
+themes, scanners), the core to-do list (add/complete/delete, persisted) and JSON
+backup export/import. Feature documents: `odd/tasks/`.
 
 This file has two parts:
 
@@ -97,7 +99,9 @@ Delegation rules:
 
 Create one only for large tasks, at `odd/tasks/<feature-name>.md`, following the format in `odd/TEMPLATE.md`.
 
-- **Specs:** quote the user's phrases, messages and examples verbatim. Never summarize them and never add requirements the user did not ask for. Mark assumptions as assumptions, and mark agent proposals the user accepted as such.
+- **Specs:** quote the user's phrases, messages and examples verbatim. A verbatim
+  quote may elide content a repository guard forbids (e.g. a literal that tests reject);
+  mark it `[elided: <reason>]` and record why in the Log. Never summarize them and never add requirements the user did not ask for. Mark assumptions as assumptions, and mark agent proposals the user accepted as such.
 - **Log:** `L1` is the original request, verbatim. After that, append dated entries: the user's corrections (verbatim), evidence, decisions and the next step. Never delete anything.
 - **When a requirement changes:** append the verbatim entry to the Log, rewrite only the affected `S#` and reopen only its task.
 - **An agent's finding does not expand the scope:** ask the user.
@@ -128,6 +132,11 @@ What to test:
 | High | The Risk line names an item | Self-verification plus the `verifier` subagent |
 
 - **Before delivering**, re-run one of the reported commands.
+- **A verdict closes a risk, not a file:** every task whose Risk line names an item
+  needs a verifier verdict before it closes — including a task reopened after it was
+  closed and any fix made after a verdict. A new commit with an item in its Risk line
+  needs its own verdict (or re-verification of the range that includes it) before the
+  task is closed again.
 - **If the verifier finds problems:** one batch of fixes, then one recheck limited to those problems. If they are still open, the task stays `partial` and you explain what is missing. No loops.
 - **Add the verifier's probes as regression tests**, unless they ask for something new: in that case, ask the user.
 - **Formatters run before verification.** If anything changes after verification, verify again.
@@ -144,6 +153,10 @@ The source of truth is the committed feature document plus the git state.
 ## A9. Human control
 
 - **Push, PRs and merges are the user's decision.**
+- **Recorded hashes are immutable:** once a commit hash is recorded as evidence (a feature
+  document or a pushed branch), never amend it; fix forward with a new commit and record it.
+- **Every commit carries a `Risk:` trailer,** separated from the body by a blank line so it
+  parses with `git interpret-trailers`.
 - **Commits:** only on large tasks, one per work unit, on the feature branch (if you are on `main`, create the branch first), with Conventional Commit messages. A unit that names a risk item gets its own commit. On small tasks, only if the user asks.
 - **Ask first** before destructive git operations, deleting files or touching another repository.
 - **User decisions beat agent momentum.**
@@ -151,9 +164,6 @@ The source of truth is the committed feature document plus the git state.
 ---
 
 # Part B — Code policy
-
-> **Initial proposal.** The user may change it. Commands were verified when the scaffolding landed
-> (see the TypeScript note in B4).
 
 ## B1. Stack
 
@@ -170,6 +180,8 @@ src/
   features/<feature>/     # components, hooks and tests for one feature
   shared/hooks/           # hooks reused across features
   shared/storage.ts       # the ONLY access point to localStorage
+  shared/styles/          # tokens.css and the tests that enforce B5
+  shared/<helper>.ts      # pure helpers reused across features (e.g. taskText.ts)
   app/                    # app composition and entry point
 e2e/                      # Playwright tests
 odd/tasks/                # feature documents
