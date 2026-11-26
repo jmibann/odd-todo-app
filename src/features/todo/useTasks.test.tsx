@@ -165,6 +165,6 @@ describe('useTasks replaceTasks (backup S4)', () => {
     const texts = [...screen.getByRole('list').children].map(
       (li) => li.querySelector('span')?.textContent,
     )
-    expect(texts).toEqual(['Imported', 'Also imported'])
+    expect(texts).toEqual(['[x] Imported', 'Also imported'])
   })
 })
