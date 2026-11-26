@@ -16,7 +16,7 @@ under **Organic Driven Development (ODD)**: the process adapts to what each requ
 ## Getting started
 
 ```bash
-cd ~/Desktop/odd-todo-app
+cd ~/code/odd-todo-app
 opencode
 ```
 
