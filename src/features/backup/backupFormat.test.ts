@@ -180,6 +180,12 @@ describe('backup file contract (S5)', () => {
       .toBeNull()
     expect(parseBackup(wrap('2026-13-45T12:00:00Z'))).toBeNull()
     expect(parseBackup(wrap(1700000000000))).toBeNull()
+    expect(parseBackup(wrap('2026-11-26T12:00:00.000+25:00'))).toBeNull()
+    // Documented boundary (verifier L8): out-of-range DAY rolls over inside
+    // V8 Date.parse (2025-02-29 → 2025-03-01) and is therefore accepted.
+    // Harmless by construction — exportedAt is validated but never consumed.
+    // Strict calendar rejection would be a contract change (asked in L8).
+    expect(parseBackup(wrap('2025-02-29T00:00:00Z'))).not.toBeNull()
   })
 
   it('rejects oversized sources', () => {
