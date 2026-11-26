@@ -1,7 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import styles from './TaskForm.module.css'
-
-const MAX_LENGTH = 120
+import { isTaskTextEmpty, isTaskTextTooLong } from '../../shared/taskText.ts'
 
 /**
  * Add-task form (odd/tasks/todo-core.md S1). All user-facing strings are
@@ -14,15 +13,15 @@ export function TaskForm({ onAdd }: { onAdd: (text: string) => void }) {
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const text = value.trim()
-    if (text === '') {
+    if (isTaskTextEmpty(value)) {
       setError('Write a task first.')
       return
     }
-    if (text.length > MAX_LENGTH) {
+    if (isTaskTextTooLong(value)) {
       setError('Keep it to 120 characters or fewer.')
       return
     }
+    const text = value.trim()
     onAdd(text)
     setValue('')
     setError(null)
