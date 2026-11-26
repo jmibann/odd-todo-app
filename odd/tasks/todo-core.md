@@ -21,14 +21,14 @@ S7. Out of scope — "Out of scope: editing a task, filters, reordering, \"clear
 
 ## Tasks
 
-- [ ] T1 (all) inline · this document, L1 verbatim · Risk: none · evidence: file
-- [ ] T2 (S5) inline · `src/features/todo/useTasks.ts` + `useTasks.test.tsx`: load/add/toggle/remove; valid-shape load; whole-reject → empty view; NO write on mount, writes only on user mutation; round-trip via unmount→remount · Risk: items 1+3 (new stored data shape; shared hook contract) · evidence: RED→GREEN
-- [ ] T3 (S1) inline · `TaskForm.tsx` + test: label "New task", "Add", Enter adds, trim, empty/ws → "Write a task first.", >120 → "Keep it to 120 characters or fewer.", exactly 120 valid, clear+focus kept, error clears, duplicates allowed · Risk: item 3 (form contract: trimmed text in, none out) · evidence: RED→GREEN per rule
-- [ ] T4 (S2) inline · `TaskList.tsx` + test: list, newest first, "No tasks yet." · Risk: none · evidence: RED→GREEN
-- [ ] T5 (S3) inline · `TaskItem.tsx` + test: checkbox named by task text, completed → line-through + muted token styles, uncheck restores · Risk: none · evidence: RED→GREEN + browser check
-- [ ] T6 (S4) inline · delete button `Delete <task text>` in TaskItem + test: immediate removal, survives remount · Risk: none · evidence: RED→GREEN
-- [ ] T7 (S6, S7) inline · compose in `src/app/App.tsx` (heading + toggle kept, placeholder body replaced), `Todo.module.css` tokens-only (scanner enforces) · Risk: item 3 (App composition consumed by existing smoke/e2e tests) · evidence: existing App tests stay green; browser check both themes
-- [ ] T8 (S5, S6) inline · e2e: add→complete→delete→reload survives; 375px with tasks, no horizontal scroll · Risk: none · evidence: `pnpm exec playwright test`
+- [x] T1 (all) inline · commit 25d614d · this document, L1 verbatim · Risk: none · evidence: file
+- [x] T2 (S5) inline · commit fde6658 · `src/features/todo/useTasks.ts` + `useTasks.test.tsx`: load/add/toggle/remove; valid-shape load; whole-reject → empty view; NO write on mount, writes only on user mutation; round-trip via unmount→remount · Risk: items 1+3 (new stored data shape; shared hook contract) · evidence: RED→GREEN
+- [x] T3 (S1) inline · commit b223d25 · `TaskForm.tsx` + test: label "New task", "Add", Enter adds, trim, empty/ws → "Write a task first.", >120 → "Keep it to 120 characters or fewer.", exactly 120 valid, clear+focus kept, error clears, duplicates allowed · Risk: item 3 (form contract: trimmed text in, none out) · evidence: RED (module missing) → GREEN (8 tests)
+- [x] T4 (S2) inline · commit eebed5b · `TaskList.tsx` + test: list, newest first, "No tasks yet." · Risk: none · evidence: RED→GREEN
+- [x] T5 (S3) inline · commit eebed5b + computed-style e2e 994b124 · `TaskItem.tsx` + test: checkbox named by task text, completed → line-through + muted token styles, uncheck restores · Risk: none · evidence: RED→GREEN + browser check
+- [x] T6 (S4) inline · commit eebed5b + e2e 994b124 · delete button `Delete <task text>` in TaskItem + test: immediate removal, survives remount · Risk: none · evidence: RED→GREEN
+- [x] T7 (S6, S7) inline · commit dcf1c4f · compose in `src/app/App.tsx` (heading + toggle kept, placeholder body replaced), `Todo.module.css` tokens-only (scanner enforces) · Risk: item 3 (App composition consumed by existing smoke/e2e tests) · evidence: existing App tests stay green; browser check both themes
+- [x] T8 (S5, S6) inline · commit 994b124 · e2e: add→complete→delete→reload survives; 375px with tasks, no horizontal scroll · Risk: none · evidence: `pnpm exec playwright test`
 - [ ] T9 (all) inline · B4 gates + verifier subagent (items 1+3 → high tier A7) + close · Risk: verified by `verifier` · evidence: command outputs + verdict
 
 ## Log
@@ -51,3 +51,5 @@ L2 2026-11-26 user (verbatim): > 1. as proposed. 2 whole-reject
 > (approval of the proposed storage key/shape and whole-reject validation; the go for T1.)
 
 L3 2026-11-26 next: T2 (useTasks, test-first).
+
+L4 2026-11-26 agent: T1–T8 implemented test-first; every task marked with its commit hash (25d614d, fde6658, b223d25, eebed5b, dcf1c4f, 994b124). Suite: 8 files / 37 unit tests · 5 e2e (incl. reload persistence and computed completed style) · tsc -b --force · lint · token scanner green on new modules. Deviation note: one CSS line (width: 100%) was caught by the B5 scanner during T3 and replaced with an intrinsic layout property. T9 verification launched next (items 1+3 high tier).
