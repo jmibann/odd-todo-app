@@ -214,6 +214,12 @@ tokens. No CSS framework, no CSS-in-JS, no styling dependency.
   keywords (`inherit`, `initial`, `unset`, `revert`) pass among keywords.
   Unitless numbers (z-index, opacity, line-height, flex) are allowed in modules.
   Failures name file and line.
+  Documented limits (L23): (a) `@keyframes` stop selectors (`0%`, `50%`, `100%`)
+  are animation positions, not design values — they are an explicit exemption and
+  are not scanned; declaration values inside the keyframes still are. (b) Strings
+  are not fully scanned: a raw value inside a multi-word string (for example
+  `grid-template: "a 10px"`) can pass; `%` in strings is still flagged. Accepted
+  as a known limit — no code guards it.
 - **Semantic color tokens** (each with a light and a dark value; names describe purpose,
   never the color itself): `--color-bg` page background · `--color-surface` cards and
   controls · `--color-text` primary text · `--color-text-muted` secondary text ·
