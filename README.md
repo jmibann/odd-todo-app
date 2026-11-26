@@ -12,6 +12,7 @@ under **Organic Driven Development (ODD)**: the process adapts to what each requ
 | Feature documents (large tasks only) | `odd/tasks/`, using the format in `odd/TEMPLATE.md` |
 | Independent verifier | `.opencode/agents/verifier.md` |
 | Explorer and writers | OpenCode's built-in subagents: `explore` and `general` |
+| Skills (advisory; AGENTS.md wins on conflict) | `.opencode/skills/`, precedence rule in `AGENTS.md` B6 |
 
 ## Getting started
 

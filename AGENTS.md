@@ -257,3 +257,12 @@ tokens. No CSS framework, no CSS-in-JS, no styling dependency.
 - **Adding a token:** only in `tokens.css`, with a semantic name for its purpose. Color
   tokens get light and dark values that meet the AA ratios above; add a comment stating
   what it is for. The scanner and the token file's contrast header are the gate.
+
+## B6. Skills
+
+- Skills in `.opencode/skills/` are **advisory**. When a skill conflicts with
+  AGENTS.md (Part A or Part B), AGENTS.md wins. In particular, B3 (localStorage
+  only through `src/shared/storage.ts`) and B5 (tokens only) override any skill
+  example.
+- Rules for Next.js, server components, server actions or SSR do not apply:
+  this is a Vite single-page app.
