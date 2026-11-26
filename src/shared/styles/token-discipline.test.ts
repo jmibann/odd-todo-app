@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest'
  *  - any % fails; any hex outside url() fails
  *  - any color function fails (case-insensitive)
  *  - named colors fail; only transparent, currentColor and the CSS-wide
- *    keywords (inherit/initial/unset/revert/revert-layer) are allowed
+ *    keywords (inherit/initial/unset/revert) are allowed (L19.1)
  *  - the first minmax() argument must be a simple var(--…) token or 0
  *  - font-size must reference a token
  * Selectors, comments and url(…) contents are not declaration values and
