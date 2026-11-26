@@ -103,3 +103,12 @@ L10 2026-11-26 user (verbatim): > 1. Accept S9 labels as proposed: "Switch to da
 > Record this message verbatim in the Log, reopen only the affected tasks, and commit each fix on feat/ui-policy with its hash as evidence.
 
 L11 2026-11-26 agent: implemented L10.2 and L10.3. Scanner: new rules 'raw duration' (ms/s) and extended viewport units ([dsl]?v[wfh]); RED-proven on a probe module (300ms, 2s, 100dvh, 50svw all flagged with file:line), then green. useTheme: readStoredTheme() accepts only the two valid values; corrupt entry followed as absent, never rewritten until toggle; RED→GREEN (suite 11/11). S9 labels marked accepted L10. Commits: 1d8a3b0 (scanner), 106daae (useTheme). Full gates after both: test 4 files/11, tsc -b --force, lint, playwright 2 passed. During this unit the key literal '***'-corruption struck the test file and one commit message; both caught by byte-level grep -F checks, fixed via python; no corrupted literal survives in any tracked file or message (verified).
+
+L12 2026-11-26 user (verbatim): > Two things before I merge:
+>
+> 1. You declared item 3 on 1d8a3b0 and 106daae, so A7 high tier applies: run the verifier scoped to those two commits and report its verdict.
+> 2. The '***' corruption happened five times. List each occurrence with the text you intended to write. Then add a guard test that fails if the literal '***' appears in any file under src/ or e2e/, RED-proven. Commit messages stay covered by your byte check for now.
+>
+> From now on: once a commit hash is recorded as evidence, never amend it; fix with a new commit.
+
+L13 2026-11-26 agent: standing rule adopted (no amend once a hash is recorded here; fix forward). Corruption inventory delivered in chat: (1) useTheme.ts THEME_KEY literal, (2) ui-policy.md L7 line, (3) feat(ui) commit message body, (4) useTheme.test.tsx three localStorage key sites, (5) fix(useTheme) commit message body. Guard: src/shared/integrity.test.ts (commit a787e07), forbidden literal built at runtime, RED-proven naming file:line, then green; suite 5 files / 12 tests. Verifier scoped to 1d8a3b0 and 106daae launched per L12.1; verdict recorded in L14.
