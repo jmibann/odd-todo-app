@@ -44,7 +44,8 @@ MIT License.
   `AGENTS.md` in our copy does not match that commit, so the whole-tree SHA is
   unknown.
 - License evidence: the skill's `SKILL.md` frontmatter (`license: MIT`) and the
-  upstream README's "License: MIT". No LICENSE file or copyright line is published
+  upstream README's `## License` section, which states "MIT". No LICENSE file or
+  copyright line is published
   upstream (verified 2026-11-26: no LICENSE at repo root or in the skill folder;
   GitHub reports no detected license), so none is reproduced here.
 
