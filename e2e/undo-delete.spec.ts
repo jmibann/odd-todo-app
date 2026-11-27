@@ -121,7 +121,8 @@ test('the delete persists immediately: reload in the window shows no message (S9
 test('the snackbar at 375px: no horizontal scroll (S11)', async ({ page }) => {
   page.setViewportSize({ width: 375, height: 812 })
   await page.goto('/')
-  const longTask = `${'word '.repeat(20)}${'x'.repeat(60)}`
+  // 119 chars: keeps the overflow intent without tripping TaskForm's 120 limit
+  const longTask = `${'word '.repeat(20)}${'x'.repeat(19)}`.trim()
   await addTask(page, longTask)
   await deleteTask(page, longTask)
   await expect(page.getByRole('status').getByText('Task deleted.')).toBeVisible()
