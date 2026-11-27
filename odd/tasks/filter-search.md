@@ -63,3 +63,7 @@ L2 2026-11-27 user (verbatim, routing correction): > Your routing misreads A4. "
 > Re-plan with those surfaces. Then decide on size, which is the real criterion: estimate the lines (code + tests) of each unit. If both are about 100 or more, route them to writers and show me both prompts. If either is under, keep inline and tell me the numbers.
 
 L3 2026-11-27 orchestrator: size decision — filter ≈ 365 lines, undo ≈ 295 lines (both ≥ 100), surfaces disjoint → two `general` writers launched together (full prompts in this session); App.tsx + integration + req 10 seam owned by the orchestrator. Writer prompts included: spec ref, allowed edit surfaces, verification commands, reused helpers and their invariants.
+
+L4 2026-11-27 user (verbatim): > Two clarifications for when the writers land:
+> 1. S6–S7 appear in both feature docs. Each spec must live in exactly one document. Put the seam (req 10) and any shared spec in one doc, owned by you as integrator, and reference it from the other.
+> 2. The writers' e2e specs could not run before integration. Before wiring App.tsx, run both e2e specs and record that they fail for the right reason (missing controls); after integration, record that they pass. That is their RED→GREEN.
