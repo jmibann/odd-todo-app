@@ -4,29 +4,31 @@ Objective: 5-second, latest-only undo of a delete; deletion persists immediately
 
 ## Specs
 
-S6. Message — "Deleting a task shows \"Task deleted.\" with a button \"Undo\", announced to screen readers, for 5 seconds."
+(Shared specs — UI policy, out-of-scope list, and the req-10 seam — live in `filter-search.md` S6, S7, S8 per L4 dedup; this doc references them and owns only undo specifics, renumbered U1–U4.)
 
-S7. Restore — "\"Undo\" restores the same task (text and completed state) at its original position in the full list, and the message disappears."
+U1. Message — "Deleting a task shows \"Task deleted.\" with a button \"Undo\", announced to screen readers, for 5 seconds."
 
-S8. Latest-only — "Only the latest deletion can be undone: a new delete replaces the message, and the previous deletion becomes final."
+U2. Restore — "\"Undo\" restores the same task (text and completed state) at its original position in the full list, and the message disappears."
 
-S9. Immediate persistence — "The deletion is persisted immediately. A reload during the 5 seconds keeps the task deleted and shows no message."
+U3. Latest-only — "Only the latest deletion can be undone: a new delete replaces the message, and the previous deletion becomes final."
 
-S10. With filters — "Undo restores into the full list whatever filter is active. If the active filter hides the restored task, it stays hidden."
+U4. Immediate persistence — "The deletion is persisted immediately. A reload during the 5 seconds keeps the task deleted and shows no message."
 
-S11. UI — "Styles follow AGENTS.md B5; works at 375px with no horizontal scroll."
+U5. With filters (DELETED — moved to filter-search.md S8; referenced here) — "Undo restores into the full list whatever filter is active. If the active filter hides the restored task, it stays hidden."
 
-S12. Out of scope — "Out of scope: undo for other actions, multiple undo levels, sorting, editing, saved filters. Do not add them."
+U6. UI (DELETED — see filter-search.md S6) — "Styles follow AGENTS.md B5; works at 375px with no horizontal scroll."
+
+U7. Out of scope (DELETED — see filter-search.md S7) — "Out of scope: undo for other actions, multiple undo levels, sorting, editing, saved filters. Do not add them."
 
 ## Tasks
 
 - [ ] T1 (all) orchestrator · this document (L1 verbatim in filter-search.md; shared request) · Risk: none · evidence: file
-- [ ] T2 (S7) writer:general · `useTasks.ts`: `restoreTask(task, index)` via the existing functional-updater commit path + additive tests in `useTasks.test.tsx` · Risk: items 1 and 3 (position restore into persisted ordered data; hook consumed by App) · evidence: RED→GREEN, existing tests untouched
-- [ ] T3 (S6) writer:general · `UndoDelete.tsx` snackbar: "Task deleted." + "Undo" button, `role="status"` region, tokens-only css, 5 s auto-dismiss, latest-only · Risk: item 4 (timer) · evidence: RED→GREEN with fake timers
-- [ ] T4 (S8, S9) writer:general · pending-deletion state + tests (new delete replaces; persisted immediately; in-memory undo) · Risk: items 1+4 · evidence: RED→GREEN
-- [ ] T5 (S6, S9, S12) writer:general · e2e `undo-delete.spec.ts` · Risk: none · evidence: playwright (after integration)
-- [ ] T6 (S10, integration) orchestrator · wire into `src/app/App.tsx` incl. filter interaction (restore into full list; stays hidden if filtered out) · Risk: item 3 · evidence: App-level tests + gates
-- [ ] T7 (all) orchestrator · B4 gates + verifier (items 1, 3, 4) + close · Risk: verified by `verifier` · evidence: outputs + verdict
+- [x] T2 (U2) writer:general · `useTasks.ts`: `restoreTask(task, index)` via the existing functional-updater commit path + additive tests in `useTasks.test.tsx` · Risk: items 1 and 3 (position restore into persisted ordered data; hook consumed by App) · evidence: RED (restoreTask is not a function) → GREEN, 7 original tests untouched; commit f8bfa4f · verdict pending L6
+- [x] T3 (U1) writer:general · `UndoDelete.tsx` snackbar: "Task deleted." + "Undo" button, `role="status"` region, tokens-only css, 5 s auto-dismiss, latest-only · Risk: item 4 (timer) · evidence: RED (module not found) → GREEN; 4999/5000 ms fake-timer boundaries; commit f8bfa4f
+- [x] T4 (U3, U4) writer:general · pending-deletion state + tests (new delete replaces; persisted immediately; in-memory undo) · Risk: items 1+4 · evidence: byte-identical restore proof, no-new-storage-keys assertion; commit f8bfa4f
+- [x] T5 (U1, U4) writer:general · e2e `undo-delete.spec.ts` · Risk: none · evidence: RED pre-integration (6 failures: no status region/'Task deleted.' on unwired app) → GREEN 6/6 at commit 7cacaad
+- [x] T6 (filter-search.md S8, integration) orchestrator · wire into `src/app/App.tsx` incl. filter interaction (restore into full list; stays hidden if filtered out) · Risk: item 3 · evidence: App integration tests (restore hidden under active filter, reappears at original position, S9 remount-quiet); commit 7cacaad
+- [ ] T7 (all) orchestrator · B4 gates + verifier (items 1, 3, 4) + close · Risk: verified by `verifier` · evidence: verdict recorded in L6
 
 ## Log
 
@@ -45,3 +47,5 @@ L3 2026-11-27 orchestrator: routed to a `general` writer (≈295 lines, disjoint
 L4 2026-11-27 user (verbatim): > Two clarifications for when the writers land:
 > 1. S6–S7 appear in both feature docs. Each spec must live in exactly one document. Put the seam (req 10) and any shared spec in one doc, owned by you as integrator, and reference it from the other.
 > 2. The writers' e2e specs could not run before integration. Before wiring App.tsx, run both e2e specs and record that they fail for the right reason (missing controls); after integration, record that they pass. That is their RED→GREEN.
+
+L5 2026-11-27 orchestrator: dedup per L4.1 — undo specs renumbered U1–U4; the seam (req 10) moved to `filter-search.md` S8, shared UI/out-of-scope specs to its S6/S7; U5–U7 retained as deletion markers so nothing is erased (A5). Writer report verified against git: surfaces exact (additive useTasks +17/−1 = the return line; 7 original hook tests untouched), no storage keys added, no new deps. Deviations recorded honestly: helper named `captureDeleted` (pure read) and the live region pre-rendered empty for reliable SR announcement (assertions by text, not region presence). Commits: f8bfa4f (unit), 7cacaad (integration). Gates: 103 unit / 19 e2e / tsc / lint green.
