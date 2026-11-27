@@ -1,0 +1,7 @@
+/* Tokens only (AGENTS.md B5). */
+
+.status {
+  margin: var(--space-sm) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
