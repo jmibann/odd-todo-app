@@ -149,6 +149,83 @@ describe('useTasks', () => {
   })
 })
 
+// undo-delete.md S7 (restore at original position) and S9 (the deletion is
+// persisted immediately, before any undo). Additive host only: the Host above
+// stays untouched.
+describe('useTasks restoreTask (undo-delete S7, S9)', () => {
+  const taskB = { id: 'b', text: 'Task B', completed: true }
+
+  function RestoreHost() {
+    const { tasks, removeTask, restoreTask } = useTasks()
+    return (
+      <>
+        <ul>
+          {tasks.map((task) => (
+            <li key={task.id}>
+              <span>{task.completed ? `[x] ${task.text}` : task.text}</span>
+              <button type="button" onClick={() => removeTask(task.id)}>
+                {`remove:${task.id}`}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button type="button" onClick={() => restoreTask(taskB, 1)}>
+          restore b at 1
+        </button>
+        <button type="button" onClick={() => restoreTask(taskB, 9)}>
+          restore b at 9
+        </button>
+      </>
+    )
+  }
+
+  function storedIds(): string[] {
+    return (JSON.parse(stored() ?? '[]') as { id: string }[]).map(
+      (task) => task.id,
+    )
+  }
+
+  it('persists the delete immediately and restores the task at its index across remount', () => {
+    const seedRaw = JSON.stringify([
+      { id: 'a', text: 'Task A', completed: false },
+      taskB,
+      { id: 'c', text: 'Task C', completed: false },
+    ])
+    seed(seedRaw)
+    const first = render(<RestoreHost />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'remove:b' }))
+    // S9: the raw stored JSON lacks the task before any undo or timeout.
+    expect(storedIds()).toEqual(['a', 'c'])
+
+    fireEvent.click(screen.getByRole('button', { name: 'restore b at 1' }))
+    // same order, ids and identity (text and completed state) as before
+    expect(storedIds()).toEqual(['a', 'b', 'c'])
+    expect(stored()).toBe(seedRaw)
+
+    // the restore is persisted, not just in memory
+    first.unmount()
+    render(<RestoreHost />)
+    const afterReload = [...screen.getByRole('list').children].map(
+      (li) => li.querySelector('span')?.textContent,
+    )
+    expect(afterReload).toEqual(['Task A', '[x] Task B', 'Task C'])
+  })
+
+  it('clamps an out-of-range index to the end of the list', () => {
+    seed(
+      JSON.stringify([{ id: 'a', text: 'Task A', completed: false }]),
+    )
+    render(<RestoreHost />)
+    fireEvent.click(screen.getByRole('button', { name: 'restore b at 9' }))
+    expect(storedIds()).toEqual(['a', 'b'])
+    const texts = [...screen.getByRole('list').children].map(
+      (li) => li.querySelector('span')?.textContent,
+    )
+    expect(texts).toEqual(['Task A', '[x] Task B'])
+  })
+})
+
 describe('useTasks replaceTasks (backup S4)', () => {
   it('swaps the whole list, persists, and survives remount', () => {
     window.localStorage.clear()

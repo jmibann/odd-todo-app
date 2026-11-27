@@ -39,6 +39,7 @@ export function useTasks(): {
   addTask: (text: string) => void
   toggleTask: (id: string) => void
   removeTask: (id: string) => void
+  restoreTask: (task: Task, index: number) => void
   replaceTasks: (next: Task[]) => void
 } {
   const [tasks, setTasks] = useState<Task[]>(loadTasks)
@@ -87,6 +88,20 @@ export function useTasks(): {
     [commit],
   )
 
+  // Undo delete (odd/tasks/undo-delete.md S7): puts the task back exactly at
+  // the position it was removed from. The index is clamped to the list, and
+  // the caller keeps the same Task object, so identity is preserved.
+  const restoreTask = useCallback(
+    (task: Task, index: number) => {
+      commit((previous) => {
+        const next = [...previous]
+        next.splice(Math.max(0, Math.min(index, next.length)), 0, task)
+        return next
+      })
+    },
+    [commit],
+  )
+
   // Backup import (odd/tasks/backup.md S4): a user-confirmed full swap,
   // persisted like any other mutation.
   const replaceTasks = useCallback(
@@ -96,5 +111,5 @@ export function useTasks(): {
     [commit],
   )
 
-  return { tasks, addTask, toggleTask, removeTask, replaceTasks }
+  return { tasks, addTask, toggleTask, removeTask, restoreTask, replaceTasks }
 }

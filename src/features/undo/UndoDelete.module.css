@@ -1,0 +1,43 @@
+/* Tokens only (AGENTS.md B5). Fixed bottom bar whose inset offsets keep it
+ * inside the viewport at any width, so 375px needs no breakpoint (S11). */
+
+.region {
+  position: fixed;
+  bottom: var(--space-xl);
+  left: var(--space-md);
+  right: var(--space-md);
+  z-index: 10;
+}
+
+.snackbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm) var(--space-md);
+  padding: var(--space-md);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-lg);
+}
+
+.message {
+  margin: 0;
+  font-size: var(--font-size-base);
+}
+
+.undoButton {
+  padding: var(--space-sm) var(--space-md);
+  border: var(--border-width-thick) solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  color: var(--color-accent);
+  font-size: var(--font-size-base);
+}
+
+.undoButton:focus-visible {
+  outline: var(--focus-outline-width) solid var(--color-focus);
+  outline-offset: var(--focus-outline-offset);
+}
